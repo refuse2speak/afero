@@ -19,6 +19,7 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -73,6 +74,11 @@ func (d *FileData) Name() string {
 }
 
 func CreateFile(name string, fileCreatedChan chan string) *FileData {
+	select {
+	case fileCreatedChan <- name:
+	default:
+		log.Fatalf("Channel is full. Couldn't send path: %s", name)
+	}
 	return &FileData{name: name, mode: os.ModeTemporary, modtime: time.Now(), fileCreatedChan: fileCreatedChan}
 }
 
@@ -124,6 +130,7 @@ func (f *File) Open() error {
 	f.fileData.Lock()
 	f.closed = false
 	f.fileData.Unlock()
+
 	return nil
 }
 
@@ -133,9 +140,8 @@ func (f *File) Close() error {
 	if !f.readOnly {
 		setModTime(f.fileData, time.Now())
 	}
-	f.fileData.Unlock()
 
-	f.fileData.fileCreatedChan <- f.fileData.name
+	f.fileData.Unlock()
 
 	return nil
 }

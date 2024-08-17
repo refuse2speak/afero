@@ -38,9 +38,9 @@ type MemMapFs struct {
 	fileCreatedChan chan string
 }
 
-func NewMemMapFs() Fs {
+func NewMemMapFs(fileCreatedChan chan string) Fs {
 	return &MemMapFs{
-		fileCreatedChan: make(chan string, 1),
+		fileCreatedChan: fileCreatedChan,
 	}
 }
 

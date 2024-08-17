@@ -1,4 +1,4 @@
-module github.com/refuse2speak/afero
+module github.com/spf13/afero
 
 require (
 	cloud.google.com/go/storage v1.35.1
