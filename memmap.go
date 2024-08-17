@@ -32,13 +32,20 @@ import (
 const chmodBits = os.ModePerm | os.ModeSetuid | os.ModeSetgid | os.ModeSticky // Only a subset of bits are allowed to be changed. Documented under os.Chmod()
 
 type MemMapFs struct {
-	mu   sync.RWMutex
-	data map[string]*mem.FileData
-	init sync.Once
+	mu              sync.RWMutex
+	data            map[string]*mem.FileData
+	init            sync.Once
+	fileCreatedChan chan string
 }
 
 func NewMemMapFs() Fs {
-	return &MemMapFs{}
+	return &MemMapFs{
+		fileCreatedChan: make(chan string, 1),
+	}
+}
+
+func (m *MemMapFs) GetFileCreatedChan() chan string {
+	return m.fileCreatedChan
 }
 
 func (m *MemMapFs) getData() map[string]*mem.FileData {
@@ -58,7 +65,7 @@ func (*MemMapFs) Name() string { return "MemMapFS" }
 func (m *MemMapFs) Create(name string) (File, error) {
 	name = normalizePath(name)
 	m.mu.Lock()
-	file := mem.CreateFile(name)
+	file := mem.CreateFile(name, m.fileCreatedChan)
 	m.getData()[name] = file
 	m.registerWithParent(file, 0)
 	m.mu.Unlock()

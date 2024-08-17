@@ -55,14 +55,15 @@ func (f File) Data() *FileData {
 
 type FileData struct {
 	sync.Mutex
-	name    string
-	data    []byte
-	memDir  Dir
-	dir     bool
-	mode    os.FileMode
-	modtime time.Time
-	uid     int
-	gid     int
+	name            string
+	data            []byte
+	memDir          Dir
+	dir             bool
+	mode            os.FileMode
+	modtime         time.Time
+	uid             int
+	gid             int
+	fileCreatedChan chan string
 }
 
 func (d *FileData) Name() string {
@@ -71,8 +72,8 @@ func (d *FileData) Name() string {
 	return d.name
 }
 
-func CreateFile(name string) *FileData {
-	return &FileData{name: name, mode: os.ModeTemporary, modtime: time.Now()}
+func CreateFile(name string, fileCreatedChan chan string) *FileData {
+	return &FileData{name: name, mode: os.ModeTemporary, modtime: time.Now(), fileCreatedChan: fileCreatedChan}
 }
 
 func CreateDir(name string) *FileData {
@@ -133,6 +134,9 @@ func (f *File) Close() error {
 		setModTime(f.fileData, time.Now())
 	}
 	f.fileData.Unlock()
+
+	f.fileData.fileCreatedChan <- f.fileData.name
+
 	return nil
 }
 
