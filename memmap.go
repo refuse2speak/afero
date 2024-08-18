@@ -35,16 +35,16 @@ type MemMapFs struct {
 	mu              sync.RWMutex
 	data            map[string]*mem.FileData
 	init            sync.Once
-	fileCreatedChan chan string
+	fileCreatedChan chan<- string
 }
 
-func NewMemMapFs(fileCreatedChan chan string) Fs {
+func NewMemMapFs(fileCreatedChan chan<- string) Fs {
 	return &MemMapFs{
 		fileCreatedChan: fileCreatedChan,
 	}
 }
 
-func (m *MemMapFs) GetFileCreatedChan() chan string {
+func (m *MemMapFs) GetFileCreatedChan() chan<- string {
 	return m.fileCreatedChan
 }
 
@@ -65,10 +65,17 @@ func (*MemMapFs) Name() string { return "MemMapFS" }
 func (m *MemMapFs) Create(name string) (File, error) {
 	name = normalizePath(name)
 	m.mu.Lock()
-	file := mem.CreateFile(name, m.fileCreatedChan)
+	file := mem.CreateFile(name)
 	m.getData()[name] = file
 	m.registerWithParent(file, 0)
 	m.mu.Unlock()
+
+	select {
+	case m.fileCreatedChan <- name:
+	default:
+		log.Fatalf("fileCreatedChan is full, length: %d", len(m.fileCreatedChan))
+	}
+
 	return mem.NewFileHandle(file), nil
 }
 
