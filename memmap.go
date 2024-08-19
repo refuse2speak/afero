@@ -70,10 +70,12 @@ func (m *MemMapFs) Create(name string) (File, error) {
 	m.registerWithParent(file, 0)
 	m.mu.Unlock()
 
-	select {
-	case m.fileCreatedChan <- name:
-	default:
-		log.Fatalf("fileCreatedChan is full, length: %d", len(m.fileCreatedChan))
+	if m.fileCreatedChan != nil {
+		select {
+		case m.fileCreatedChan <- name:
+		default:
+			log.Fatalf("fileCreatedChan is full, length: %d", len(m.fileCreatedChan))
+		}
 	}
 
 	return mem.NewFileHandle(file), nil
